@@ -15,10 +15,8 @@ function Methods.ForceSaveActorsOnFirstLoad(pid, cellDescription)
 	local cell = LoadedCells[cellDescription]
 	
 	if cell and Methods.nativeInstancedPairs[cellDescription] == nil then
-		-- cell:SaveActorList(pid)
 		cell:SaveActorPositions()
 		cell:SaveActorStatsDynamic()
-		-- cell:SaveActorEquipment(pid)
 
 		Methods.MemorizeCell(cellDescription)
 	end
@@ -181,6 +179,12 @@ end
 function Methods.RemoveActorOnDeath(cellDescription, uniqueIndex)
 	
 	local cell = LoadedCells[cellDescription]
+	local unloadAtEnd = false
+	
+	if cell == nil then
+		logicHandler.LoadCell(cellDescription)
+		unloadAtEnd = true
+	end
 	
 	logicHandler.DeleteObjectForEveryone(cellDescription, uniqueIndex)
 	tableHelper.removeValue(cell.data.packets.actorList, uniqueIndex)
@@ -193,6 +197,10 @@ function Methods.RemoveActorOnDeath(cellDescription, uniqueIndex)
 	cell.data.objectData[uniqueIndex] = nil
 	Methods.ForgetNativeInstancedPairs(uniqueIndex)
 	Methods.removeDeadActorTimer[uniqueIndex] = nil
+	
+	if unloadAtEnd then
+		logicHandler.UnloadCell(cellDescription)
+	end
 end
 
 function Methods.RespawnActorOnDeath(nativeCellDescription, nativeUniqueIndex)
@@ -271,11 +279,11 @@ tes3mp.StartTimer(
 end)
 
 customEventHooks.registerValidator("OnCellDeletion", function(eventStatus, cellDescription)
-	if logicHandler.GetConnectedPlayerCount() < 1 then
+	-- if logicHandler.GetConnectedPlayerCount() < 1 then
 		Methods.RemoveInstancedActors(cellDescription)
 		Methods.EnableNativeActors(cellDescription)
 		LoadedCells[cellDescription]:QuicksaveToDrive()
-	end
+	-- end
 end)
 
 customEventHooks.registerHandler("OnContainer", function(eventStatus, pid, cellDescription, objects)
